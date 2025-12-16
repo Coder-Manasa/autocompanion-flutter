@@ -119,9 +119,9 @@ class _VehicleDocScannerPageState extends State<VehicleDocScannerPage>
       'extracted_text': "",
     };
 
-    if (!kIsWeb) {
-      res = await OCRService.scanDocument(url, folder);
-    }
+    
+    res = await OCRService.scanDocument(url, folder);
+    
 
     await DocumentDBService.saveDocument(
       userId: userId,

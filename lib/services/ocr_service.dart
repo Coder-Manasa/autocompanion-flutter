@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class OCRService {
-  // ✅ CHANGE THIS URL TO YOUR DEPLOYED OCR BACKEND
+  // ✅ RENDER OCR BACKEND (LIVE)
   static const String _ocrUrl =
-      "https://YOUR-OCR-BACKEND.onrender.com/ocr-url";
+      "https://autocompanion-ocr-backend.onrender.com/ocr-url";
 
   static Future<Map<String, dynamic>> scanDocument(
     String imageUrl,
