@@ -9,8 +9,15 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initialSession =
+        Supabase.instance.client.auth.currentSession;
+
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
+      initialData: AuthState(
+        AuthChangeEvent.initialSession,
+        initialSession,
+      ),
       builder: (context, snapshot) {
         final session = snapshot.data?.session;
 

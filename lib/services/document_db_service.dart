@@ -12,7 +12,7 @@ class DocumentDBService {
     await supabase.from('vehicle_documents').insert({
       'user_id': userId,
       'doc_type': docType,
-      'file_url': fileUrl,
+      'file_url': fileUrl, // ✅ PUBLIC URL
       'expiry_date': expiryDate,
     });
   }

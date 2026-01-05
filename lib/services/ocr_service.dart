@@ -2,15 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class OCRService {
-  // ✅ RENDER OCR BACKEND (LIVE)
-  static const String _ocrUrl =
-      "https://autocompanion-ocr-backend.onrender.com/ocr-url";
-
   static Future<Map<String, dynamic>> scanDocument(
     String imageUrl,
     String docType,
   ) async {
-    final uri = Uri.parse(_ocrUrl);
+    final uri = Uri.parse("http://192.168.0.105:5002/ocr-url");
 
     final payload = jsonEncode({
       "file_url": imageUrl,
@@ -27,7 +23,7 @@ class OCRService {
         body: payload,
       );
 
-      // ❌ Server error
+      // Server error
       if (response.statusCode != 200) {
         return {
           "success": false,
@@ -35,8 +31,7 @@ class OCRService {
           "extracted_text": "Server error: ${response.body}",
         };
       }
-
-      // ✅ Valid OCR response
+      // Parse valid response
       return jsonDecode(response.body);
 
     } catch (e) {
@@ -47,4 +42,4 @@ class OCRService {
       };
     }
   }
-}
+} 

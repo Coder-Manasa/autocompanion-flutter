@@ -1,114 +1,154 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-
+import 'package:url_launcher/url_launcher.dart';
 
 class DocumentStoragePage extends StatefulWidget {
   const DocumentStoragePage({super.key});
 
   @override
-  State<DocumentStoragePage> createState() => _DocumentStoragePageState();
+  State<DocumentStoragePage> createState() =>
+      _DocumentStoragePageState();
 }
 
-class _DocumentStoragePageState extends State<DocumentStoragePage> {
+class _DocumentStoragePageState
+    extends State<DocumentStoragePage> {
   final supabase = Supabase.instance.client;
+  final firebaseUser = FirebaseAuth.instance.currentUser;
 
+  String? selectedCategory;
+  bool isLoading = false;
   List<Map<String, dynamic>> documents = [];
-  bool isLoading = true;
-  String? errorMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadDocuments();
+  final categories = ["insurance", "puc", "rc", "dl", "others"];
+
+  Future<void> _loadDocuments(String category) async {
+    if (firebaseUser == null) return;
+
+    setState(() {
+      selectedCategory = category;
+      isLoading = true;
+      documents.clear();
+    });
+
+    final data = await supabase
+        .from('vehicle_documents')
+        .select()
+        .eq('user_id', firebaseUser!.uid)
+        .ilike('doc_type', category); // ✅ case-safe
+
+    setState(() {
+      documents = List<Map<String, dynamic>>.from(data);
+      isLoading = false;
+    });
   }
 
-  Future<void> _loadDocuments() async {
-    try {
-      // ✅ FIREBASE AUTH ONLY (CONSISTENT WITH SCANNER)
-      final firebaseUser = FirebaseAuth.instance.currentUser;
+  void _openDocument(String url) async {
+    if (url.isEmpty) return;
 
-      if (firebaseUser == null) {
-        setState(() {
-          errorMessage = "User not logged in";
-          isLoading = false;
-        });
-        return;
-      }
-
-      final response = await supabase
-          .from('vehicle_documents')
-          .select()
-          .eq('user_id', firebaseUser.uid)
-          .order('id', ascending: false);
-
-      setState(() {
-        documents = List<Map<String, dynamic>>.from(response);
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = "Failed to load documents";
-        isLoading = false;
-      });
-    }
+    await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
   }
-
-  Future<void> _openDocument(String? url) async {
-  if (url == null || url.isEmpty) return;
-
-  final uri = Uri.parse(url);
-
-  await launchUrl(
-    uri,
-    mode: LaunchMode.externalApplication,
-  );
- }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("My Documents"),
+        backgroundColor: Colors.black,
+        title: Text(
+          selectedCategory?.toUpperCase() ??
+              "Document Storage",
+          style:
+              const TextStyle(color: Color(0xFFD4AF37)),
+        ),
+        leading: selectedCategory != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back,
+                    color: Color(0xFFD4AF37)),
+                onPressed: () {
+                  setState(() {
+                    selectedCategory = null;
+                    documents.clear();
+                  });
+                },
+              )
+            : null,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : errorMessage != null
-              ? Center(
-                  child: Text(
-                    errorMessage!,
-                    style: const TextStyle(color: Colors.redAccent),
+      body: selectedCategory == null
+          ? ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: categories.length,
+              itemBuilder: (_, i) {
+                final cat = categories[i];
+                return Card(
+                  color: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(
+                        color: Color(0xFFD4AF37)),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: ListTile(
+                    title: Text(
+                      cat.toUpperCase(),
+                      style: const TextStyle(
+                        color: Color(0xFFD4AF37),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Color(0xFFD4AF37),
+                      size: 16,
+                    ),
+                    onTap: () => _loadDocuments(cat),
+                  ),
+                );
+              },
+            )
+          : isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                      color: Color(0xFFD4AF37)),
                 )
               : documents.isEmpty
                   ? const Center(
-                      child: Text("No documents uploaded yet"),
+                      child: Text(
+                        "No documents found",
+                        style:
+                            TextStyle(color: Colors.white54),
+                      ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(12),
                       itemCount: documents.length,
-                      itemBuilder: (context, index) {
-                        final doc = documents[index];
-
+                      itemBuilder: (_, i) {
+                        final doc = documents[i];
                         return Card(
-                          elevation: 3,
-                          margin: const EdgeInsets.only(bottom: 12),
+                          color: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            side: const BorderSide(
+                                color: Color(0xFFD4AF37)),
+                            borderRadius:
+                                BorderRadius.circular(12),
+                          ),
                           child: ListTile(
-                            leading: const Icon(Icons.insert_drive_file),
                             title: Text(
-                              doc['doc_type'] ?? 'Document',
+                              doc['doc_type']
+                                  .toString()
+                                  .toUpperCase(),
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                                  color: Colors.white),
                             ),
-                            subtitle: Text(
-                              "Expiry: ${doc['expiry_date'] ?? 'Not detected'}",
+                            subtitle: const Text(
+                              "Tap to open",
+                              style: TextStyle(
+                                  color: Colors.white70),
                             ),
-                            trailing: const Icon(Icons.open_in_new),
-                            onTap: () => _openDocument(doc['file_url']),
+                            onTap: () =>
+                                _openDocument(doc['file_url']),
                           ),
                         );
                       },
